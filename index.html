@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" type="image/png" href="https://i.ibb.co.com/nqPTyK8G/image.png" />
+  <title>PanSkip Admin — Monitoring & Control Panel</title>
+
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter', 'sans-serif'] },
+          colors: {
+            brand: {
+              400: '#4ade80',
+              500: '#22c55e',
+              600: '#16a34a',
+            },
+            dark: {
+              base: '#0b0f17',
+              card: '#111827',
+              border: '#1f2937',
+            }
+          },
+          boxShadow: { 'glow': '0 0 25px -5px rgba(34, 197, 94, 0.4)' }
+        }
+      }
+    }
+  </script>
+
+  <!-- Lucide Icons & Supabase SDK -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    .glass-card {
+      background: rgba(17, 24, 39, 0.7);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+  </style>
+</head>
+<body class="bg-dark-base text-gray-100 font-sans antialiased min-h-screen p-4 sm:p-8">
+
+  <div class="max-w-7xl mx-auto space-y-8">
+    
+    <!-- HEADER -->
+    <header class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-6 border-b border-gray-800">
+      <div class="flex items-center gap-3">
+        <div class="w-12 h-12 rounded-2xl bg-dark-card border border-brand-500/40 p-1 flex items-center justify-center shadow-glow">
+          <img src="https://i.ibb.co.com/nqPTyK8G/image.png" alt="PanSkip Logo" class="w-full h-full object-cover rounded-xl" />
+        </div>
+        <div>
+          <h1 class="text-2xl font-black text-white tracking-tight">PanSkip <span class="text-brand-400">Dashboard Admin</span></h1>
+          <p class="text-xs text-gray-400">Monitoring User & Analytics System</p>
+        </div>
+      </div>
+      <button onclick="loadAdminDashboard()" class="px-4 py-2 bg-dark-card border border-gray-700 hover:border-brand-500/50 text-gray-300 font-bold text-xs rounded-xl transition-all flex items-center gap-2">
+        <i data-lucide="refresh-cw" class="w-4 h-4 text-brand-400"></i>
+        <span>Refresh Data</span>
+      </button>
+    </header>
+
+    <!-- STATS CARDS -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+      
+      <!-- CARD 1: TOTAL USER -->
+      <div class="glass-card p-6 rounded-2xl space-y-2">
+        <div class="flex items-center justify-between text-gray-400">
+          <span class="text-xs font-bold uppercase tracking-wider">Total Akun Terdaftar</span>
+          <i data-lucide="users" class="w-5 h-5 text-brand-400"></i>
+        </div>
+        <p id="stat-total-users" class="text-3xl font-black text-white">0</p>
+        <p class="text-[11px] text-gray-500">Terdaftar di Supabase Profiles</p>
+      </div>
+
+      <!-- CARD 2: TOTAL BYPASS -->
+      <div class="glass-card p-6 rounded-2xl space-y-2">
+        <div class="flex items-center justify-between text-gray-400">
+          <span class="text-xs font-bold uppercase tracking-wider">Total Penggunaan Bypass</span>
+          <i data-lucide="zap" class="w-5 h-5 text-emerald-400"></i>
+        </div>
+        <p id="stat-total-bypass" class="text-3xl font-black text-emerald-400">0</p>
+        <p class="text-[11px] text-gray-500">Eksekusi link dari seluruh pengguna</p>
+      </div>
+
+      <!-- CARD 3: STATUS DATABASE -->
+      <div class="glass-card p-6 rounded-2xl space-y-2">
+        <div class="flex items-center justify-between text-gray-400">
+          <span class="text-xs font-bold uppercase tracking-wider">Status Database</span>
+          <i data-lucide="database" class="w-5 h-5 text-brand-400"></i>
+        </div>
+        <div class="flex items-center gap-2 pt-1">
+          <span class="w-3 h-3 rounded-full bg-emerald-500 animate-pulse"></span>
+          <span class="text-lg font-bold text-white">Connected</span>
+        </div>
+        <p class="text-[11px] text-gray-500">Supabase Realtime Active</p>
+      </div>
+
+    </div>
+
+    <!-- MAIN CONTENT TABLE -->
+    <div class="glass-card rounded-2xl overflow-hidden border border-gray-800 space-y-4 p-6">
+      
+      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h2 class="text-lg font-extrabold text-white">Daftar Pengguna PanSkip</h2>
+          <p class="text-xs text-gray-400">Kelola dan pantau statistik penggunaan masing-masing akun</p>
+        </div>
+        <!-- SEARCH BAR -->
+        <div class="relative w-full sm:w-72">
+          <input type="text" id="search-input" onkeyup="filterUsers()" placeholder="Cari nama, email, atau ID..." class="w-full pl-9 pr-4 py-2 bg-dark-base border border-gray-700 rounded-xl text-xs text-white focus:border-brand-500">
+          <i data-lucide="search" class="w-4 h-4 text-gray-500 absolute left-3 top-2.5"></i>
+        </div>
+      </div>
+
+      <!-- USER TABLE -->
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs">
+          <thead class="bg-dark-base text-gray-400 font-bold uppercase border-b border-gray-800">
+            <tr>
+              <th class="py-3 px-4">Pengguna</th>
+              <th class="py-3 px-4">Email</th>
+              <th class="py-3 px-4">User ID</th>
+              <th class="py-3 px-4 text-center">Penggunaan Bypass</th>
+              <th class="py-3 px-4 text-right">Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="user-table-body" class="divide-y divide-gray-800/60 text-gray-300">
+            <tr>
+              <td colspan="5" class="py-8 text-center text-gray-500">Memuat data pengguna...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+
+  </div>
+
+  <script>
+    // SAMA DENGAN KREDENSIAL DI WEB USER PANSKIP
+    const SUPABASE_URL = 'https://atgujhpouptqipcjchlm.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF0Z3VqaHBvdXB0cWlwY2pjaGxtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg4NzI0MzQsImV4cCI6MjEwNDQ0ODQzNH0.BsFpKqtj3sdsnHzJttT_2gDAxyul7ljou5FcU8SnUpc';
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    let allUsersData = [];
+
+    document.addEventListener("DOMContentLoaded", () => {
+      lucide.createIcons();
+      loadAdminDashboard();
+    });
+
+    // 1. FETCH SEMUA DATA USER DARI SUPABASE
+    async function loadAdminDashboard() {
+      const tbody = document.getElementById("user-table-body");
+      
+      try {
+        const { data: profiles, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        allUsersData = profiles || [];
+        renderTable(allUsersData);
+        updateStats(allUsersData);
+      } catch (err) {
+        console.error("Gagal memuat dashboard admin:", err);
+        tbody.innerHTML = `<tr><td colspan="5" class="py-8 text-center text-red-400 font-medium">Gagal mengambil data dari database!</td></tr>`;
+      }
+    }
+
+    // 2. RENDER TABLE DATA USER
+    function renderTable(users) {
+      const tbody = document.getElementById("user-table-body");
+      if (users.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="py-8 text-center text-gray-500">Tidak ada user terdaftar.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = users.map(user => `
+        <tr class="hover:bg-gray-800/30 transition-colors">
+          <td class="py-3 px-4 font-bold text-white">${escapeHtml(user.full_name || 'Tanpa Nama')}</td>
+          <td class="py-3 px-4 text-emerald-400 font-medium">${escapeHtml(user.email || '-')}</td>
+          <td class="py-3 px-4 font-mono text-[10px] text-gray-500">${user.id}</td>
+          <td class="py-3 px-4 text-center">
+            <span class="px-2.5 py-1 rounded-full bg-brand-500/10 border border-brand-500/30 text-brand-400 font-extrabold text-[11px]">
+              ${(user.bypass_count || 0).toLocaleString('id-ID')}x Bypass
+            </span>
+          </td>
+          <td class="py-3 px-4 text-right">
+            <button onclick="deleteUser('${user.id}', '${escapeHtml(user.full_name || user.email)}')" class="px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 font-bold rounded-lg transition-all text-[11px]">
+              Hapus Akun
+            </button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    // 3. UPDATE RANGKUMAN STATISTIK
+    function updateStats(users) {
+      document.getElementById("stat-total-users").textContent = users.length.toLocaleString('id-ID');
+      const totalBypass = users.reduce((acc, curr) => acc + (curr.bypass_count || 0), 0);
+      document.getElementById("stat-total-bypass").textContent = totalBypass.toLocaleString('id-ID');
+    }
+
+    // 4. EKSIKUSI HAPUS AKUN USER DARI DATABASE AUTH (RPC SQL)
+    async function deleteUser(userId, userName) {
+      const isConfirmed = confirm(`Yakin ingin menghapus akun "${userName}" secara permanen?\n\nUser akan langsung otomatis dikeluarkan di layarnya.`);
+      if (!isConfirmed) return;
+
+      try {
+        const { error } = await supabase.rpc('delete_user_by_admin', { target_user_id: userId });
+        if (error) throw error;
+
+        alert(`Akun ${userName} berhasil dihapus dari database!`);
+        loadAdminDashboard();
+      } catch (err) {
+        alert("Gagal menghapus user: " + (err.message || "Pastikan SQL Function `delete_user_by_admin` sudah dibuat di Supabase."));
+      }
+    }
+
+    // 5. FITUR FILTER PENCARIAN
+    function filterUsers() {
+      const query = document.getElementById("search-input").value.toLowerCase();
+      const filtered = allUsersData.filter(u => 
+        (u.full_name && u.full_name.toLowerCase().includes(query)) ||
+        (u.email && u.email.toLowerCase().includes(query)) ||
+        (u.id && u.id.toLowerCase().includes(query))
+      );
+      renderTable(filtered);
+    }
+
+    function escapeHtml(str) {
+      return str.replace(/'/g, "\\'");
+    }
+  </script>
+</body>
+</html>
